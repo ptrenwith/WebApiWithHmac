@@ -16,11 +16,11 @@ namespace Company.Product.AuthenticationService
             { AppId, ApiKey },
         };
         private readonly static int _requestMaxAgeInSeconds = 300;
-        private static MemoryCacheOptions _cacheOptions = new MemoryCacheOptions
+        private static readonly MemoryCacheOptions _cacheOptions = new MemoryCacheOptions
         {
             ExpirationScanFrequency = TimeSpan.FromSeconds(_requestMaxAgeInSeconds),
         };
-        private static IMemoryCache _memoryCache = new MemoryCache(_cacheOptions);
+        private static readonly IMemoryCache _memoryCache = new MemoryCache(_cacheOptions);
 
         public static string ComputeHMACSignature(string httpMethod, string requestUri, string timestamp, string nonce, string content)
         {
@@ -45,18 +45,12 @@ namespace Company.Product.AuthenticationService
 
         public static bool ValidateHMACSignature(string httpMethod, string requestUri, string appId, string timestamp, string nonce, string content, string incomingBase64Signature)
         {
-            if (!_allowedApps.ContainsKey(appId))
+            if (!_allowedApps.ContainsKey(appId) || IsReplayRequest(nonce, timestamp))
             {
                 return false;
             }
 
             var sharedKey = _allowedApps[appId];
-
-            if (IsReplayRequest(nonce, timestamp))
-            {
-                return false;
-            }
-
             var computedSignature = ComputeHMACSignature(httpMethod, requestUri, appId, sharedKey, timestamp, nonce, content);
             return (incomingBase64Signature.Equals(computedSignature, StringComparison.Ordinal));
         }

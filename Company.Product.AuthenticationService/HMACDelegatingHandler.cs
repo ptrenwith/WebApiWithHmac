@@ -7,7 +7,7 @@ using System.Web;
 
 namespace Company.Product.AuthenticationService
 {
-    public class HMACDelegatingHandler : DelegatingHandler
+    public sealed class HMACDelegatingHandler : DelegatingHandler
     {
         protected async override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {

@@ -49,6 +49,22 @@ namespace Company.Product.UnitTests.Services
         }
 
         [Test]
+        public void HMACSignatureExpirationTest()
+        {
+            var method = "POST";
+            var uri = "https://localhost/v1/calculations/dams/capacities";
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+            var nonce = Guid.NewGuid().ToString();
+            var content = "absd1234";
+
+            var signature = HMACAuthentication.ComputeHMACSignature(method, uri, timestamp, nonce, content);
+
+            timestamp = DateTimeOffset.UtcNow.AddMinutes(10).ToUnixTimeSeconds().ToString();
+            var valid = HMACAuthentication.ValidateHMACSignature(method, uri, HMACAuthentication.AppId, timestamp, nonce, content, signature);
+            valid.Should().BeFalse();
+        }
+
+        [Test]
         public void Sha256Test()
         {
             var hash = HMACAuthentication.Sha256(Encoding.ASCII.GetBytes(""));

@@ -1,4 +1,5 @@
-﻿using Company.Product.Services.Interfaces;
+﻿using Company.Product.Models.Internal;
+using Company.Product.Services.Interfaces;
 
 namespace Company.Product.Services.Services
 {
@@ -6,65 +7,55 @@ namespace Company.Product.Services.Services
     {
         public int CalculateDamCapacityFromElevation(int[] elevation)
         {
-            bool openSide = false;
-            int damCapacity = 0;
-            int potentialCapacity = 0;
-            int maxElevation = elevation[0];
-            int pivot = 0;
+            DamCapacity damCapacity = new DamCapacity(elevation);
 
             for (int i = 1; i < elevation.Length; i++)
             {
-                if (elevation[i] < maxElevation)
-                {
-                    if (!openSide)
-                    {
-                        openSide = true;
-                        potentialCapacity = 0;
-                    }
-
-                    potentialCapacity += maxElevation - elevation[i];
-                }
-                else
-                {
-                    if (openSide)
-                    {
-                        pivot = i;
-                        openSide = false;
-                    }
-                    maxElevation = elevation[i];
-                    damCapacity += potentialCapacity;
-                    potentialCapacity = 0;
-                }
-
+                damCapacity.Direction = Directions.Forwards;
+                EvaluatePotentialCapacity(damCapacity, i);
             }
 
-            if (openSide)
+            // if Open = true it means the end of the array has been reached and the calculation is incomplete, 
+            // do the calculation again but start from the back of the array working back to the pivot value.
+            if (damCapacity.Open)
             {
-                potentialCapacity = 0;
-                maxElevation = elevation[elevation.Length - 1];
-                for (int i = elevation.Length - 1; i > pivot - 1; i--)
+                damCapacity.PotentialCapacity = 0;
+                damCapacity.MaxElevation = elevation[elevation.Length - 1];
+                for (int i = elevation.Length - 1; i > damCapacity.Pivot - 1; i--)
                 {
-                    if (elevation[i] < maxElevation)
-                    {
-                        if (!openSide)
-                        {
-                            openSide = true;
-                            potentialCapacity = 0;
-                        }
-
-                        potentialCapacity += maxElevation - elevation[i];
-                    }
-                    else
-                    {
-                        openSide = false;
-                        damCapacity += potentialCapacity;
-                        potentialCapacity = 0;
-                        maxElevation = elevation[i];
-                    }
+                    damCapacity.Direction = Directions.Backwards;
+                    EvaluatePotentialCapacity(damCapacity, i);
                 }
             }
 
-            return damCapacity;
+            return damCapacity.TotalCapacity;
+        }
+
+        private void EvaluatePotentialCapacity(DamCapacity damCapacity, int index)
+        {
+            if (damCapacity.ElevationMap[index] < damCapacity.MaxElevation)
+            {
+                if (!damCapacity.Open)
+                {
+                    // this space can contain water.
+                    damCapacity.Open = true;
+                    damCapacity.PotentialCapacity = 0;
+                }
+
+                damCapacity.PotentialCapacity += damCapacity.MaxElevation - damCapacity.ElevationMap[index];
+            }
+            else
+            {
+                // we have reached a point in the array where we know the potentialCapacity is part of the actual capacity.
+                if (damCapacity.Direction.Equals(Directions.Forwards) && damCapacity.Open)
+                {
+                    damCapacity.Pivot = index;
+                }
+                damCapacity.Open = false;
+                damCapacity.MaxElevation = damCapacity.ElevationMap[index];
+                damCapacity.TotalCapacity += damCapacity.PotentialCapacity;
+                damCapacity.PotentialCapacity = 0;
+            }
         }
     }
 }
